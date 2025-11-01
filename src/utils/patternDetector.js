@@ -55,114 +55,139 @@ const WORD_SET = new Set([...INDONESIAN_WORDS, ...ENGLISH_WORDS]);
 
 /**
  * MAXIMUM ACCURACY scoring with 6-grams + 5-grams + statistical analysis
- * Layered: Hexagrams (15%) + Pentagrams (15%) + Others (35%) + Dictionary (25%) + Stats (10%)
+ * SMART: Focus on beginning of text (where real content is), not padding!
+ * Layered: Dictionary Words (40%) + Hexagrams (15%) + Pentagrams (15%) + Others (20%) + Stats (10%)
  */
 function quickScore(text) {
   if (!text || text.length < 2) return 0;
   
   let score = 0;
   
-  // 0. HEXAGRAM frequency (15% weight) - GODLIKE POWER! 🔥
-  if (text.length >= 6) {
+  // CRITICAL: For short text (<30 chars), focus on first 70% only (avoid padding!)
+  const effectiveLength = text.length < 30 ? Math.floor(text.length * 0.7) : text.length;
+  const focusText = text.slice(0, Math.max(effectiveLength, 10)); // At least 10 chars
+  
+  // ═══════════════════════════════════════════════
+  // PRIORITY #1: COMPLETE WORD DETECTION (50% weight!!!) 
+  // ═══════════════════════════════════════════════
+  let wordScore = 0;
+  let longestWord = 0;
+  let totalWordLength = 0;
+  
+  // Check ALL dictionary words (sorted longest first for better matching)
+  const sortedWords = [...WORD_SET].sort((a, b) => b.length - a.length);
+  
+  for (const word of sortedWords) {
+    if (word.length >= 3 && focusText.includes(word)) {
+      // SUPER EXPONENTIAL scoring for longer words
+      const wordValue = Math.pow(word.length, 2.5); // Even MORE aggressive!
+      wordScore += wordValue;
+      longestWord = Math.max(longestWord, word.length);
+      totalWordLength += word.length;
+    }
+  }
+  
+  // INSANE BONUS for long words (they're ULTRA reliable!)
+  if (longestWord >= 10) {
+    wordScore *= 20.0; // 20x for 10+ letter words! (INFORMATIKA = ULTRA JACKPOT!)
+  } else if (longestWord >= 9) {
+    wordScore *= 12.0; // 12x for 9 letter words
+  } else if (longestWord >= 8) {
+    wordScore *= 8.0; // 8x for 8+ letter words
+  } else if (longestWord >= 7) {
+    wordScore *= 5.0; // 5x for 7+ letter words
+  } else if (longestWord >= 6) {
+    wordScore *= 3.0; // 3x for 6-letter words
+  } else if (longestWord >= 5) {
+    wordScore *= 1.8; // 1.8x for 5-letter words
+  } else {
+    // PENALTI: Only short words (3-4 letters) = probably random matches
+    wordScore *= 0.4; // 60% penalty for short words only
+  }
+  
+  // Coverage bonus: reward high word coverage
+  const coverage = totalWordLength / focusText.length;
+  if (coverage >= 0.9) {
+    wordScore *= 3.5; // 3.5x if 90%+ is real words! (PERFECT!)
+  } else if (coverage >= 0.7) {
+    wordScore *= 2.8; // 2.8x if 70%+ is real words (EXCELLENT!)
+  } else if (coverage >= 0.5) {
+    wordScore *= 2.0; // 2x if 50%+ is real words (GOOD!)
+  } else if (coverage >= 0.3) {
+    wordScore *= 1.3; // 1.3x if 30%+ is real words
+  }
+  
+  score += Math.min(55, wordScore); // Cap at 55 points (higher!)
+  
+  // ═══════════════════════════════════════════════
+  // N-GRAM Analysis (BALANCED - support word detection)
+  // ═══════════════════════════════════════════════
+  
+  // 0. HEXAGRAM frequency (12% weight)
+  if (focusText.length >= 6) {
     let hexagramCount = 0;
-    for (let i = 0; i < text.length - 5; i++) {
-      const hexagram = text.slice(i, i + 6);
+    for (let i = 0; i < focusText.length - 5; i++) {
+      const hexagram = focusText.slice(i, i + 6);
       if (HEXAGRAM_SET.has(hexagram)) {
-        hexagramCount += 8; // INSANE weight (8x bigram!)
+        hexagramCount += 7; // good weight
       }
     }
-    const hexagramScore = Math.min(15, (hexagramCount / (text.length - 5)) * 20);
+    const hexagramScore = Math.min(12, (hexagramCount / (focusText.length - 5)) * 18);
     score += hexagramScore;
   }
   
-  // 1. PENTAGRAM frequency (15% weight) - ULTIMATE POWER!
-  if (text.length >= 5) {
+  // 1. PENTAGRAM frequency (12% weight)
+  if (focusText.length >= 5) {
     let pentagramCount = 0;
-    for (let i = 0; i < text.length - 4; i++) {
-      const pentagram = text.slice(i, i + 5);
+    for (let i = 0; i < focusText.length - 4; i++) {
+      const pentagram = focusText.slice(i, i + 5);
       if (PENTAGRAM_SET.has(pentagram)) {
-        pentagramCount += 5; // MEGA weight (5x bigram!)
+        pentagramCount += 5; // good weight
       }
     }
-    const pentagramScore = Math.min(15, (pentagramCount / (text.length - 4)) * 18);
+    const pentagramScore = Math.min(12, (pentagramCount / (focusText.length - 4)) * 16);
     score += pentagramScore;
   }
   
-  // 2. QUADGRAM frequency (12% weight) - Still powerful!
-  if (text.length >= 4) {
+  // 2. QUADGRAM frequency (8% weight)
+  if (focusText.length >= 4) {
     let quadgramCount = 0;
-    for (let i = 0; i < text.length - 3; i++) {
-      const quadgram = text.slice(i, i + 4);
+    for (let i = 0; i < focusText.length - 3; i++) {
+      const quadgram = focusText.slice(i, i + 4);
       if (QUADGRAM_SET.has(quadgram)) {
-        quadgramCount += 2; // Double weight
+        quadgramCount += 2; // balanced weight
       }
     }
-    const quadgramScore = Math.min(12, (quadgramCount / (text.length - 3)) * 15);
+    const quadgramScore = Math.min(8, (quadgramCount / (focusText.length - 3)) * 10);
     score += quadgramScore;
   }
   
-  // 3. TRIGRAM frequency (8% weight)
-  if (text.length >= 3) {
+  // 3. TRIGRAM frequency (6% weight)
+  if (focusText.length >= 3) {
     let trigramCount = 0;
-    for (let i = 0; i < text.length - 2; i++) {
-      const trigram = text.slice(i, i + 3);
+    for (let i = 0; i < focusText.length - 2; i++) {
+      const trigram = focusText.slice(i, i + 3);
       if (TRIGRAM_SET.has(trigram)) {
         trigramCount++;
       }
     }
-    const trigramScore = Math.min(8, (trigramCount / (text.length - 2)) * 10);
+    const trigramScore = Math.min(6, (trigramCount / (focusText.length - 2)) * 8);
     score += trigramScore;
   }
   
-  // 4. BIGRAM frequency (5% weight)
-  if (text.length >= 2) {
+  // 4. BIGRAM frequency (7% weight)
+  if (focusText.length >= 2) {
     let bigramCount = 0;
-    for (let i = 0; i < text.length - 1; i++) {
-      const bigram = text.slice(i, i + 2);
+    for (let i = 0; i < focusText.length - 1; i++) {
+      const bigram = focusText.slice(i, i + 2);
       if (BIGRAM_SET.has(bigram)) {
         bigramCount++;
       }
     }
-    const bigramScore = Math.min(5, (bigramCount / (text.length - 1)) * 8);
+    const bigramScore = Math.min(7, (bigramCount / (focusText.length - 1)) * 8);
     score += bigramScore;
   }
-  
-  // 4. DICTIONARY WORD detection (25% weight) - Enhanced with partial matching
-  let wordMatchScore = 0;
-  let longestWordFound = 0;
-  let totalWordCoverage = 0;
-  
-  // Sort words by length (longer first for better matching)
-  const sortedWords = [...WORD_SET].sort((a, b) => b.length - a.length);
-  
-  sortedWords.forEach(word => {
-    if (word.length >= 3 && text.includes(word)) {
-      // Longer words get exponentially higher scores
-      const wordValue = Math.pow(word.length, 1.5);
-      wordMatchScore += wordValue;
-      longestWordFound = Math.max(longestWordFound, word.length);
-      totalWordCoverage += word.length;
-    }
-  });
-  
-  // MEGA BONUS multipliers
-  if (longestWordFound >= 7) {
-    wordMatchScore *= 2.5; // 2.5x for 7+ letter words (super reliable!)
-  } else if (longestWordFound >= 6) {
-    wordMatchScore *= 2.0; // 2x for 6-letter words (very reliable!)
-  } else if (longestWordFound >= 5) {
-    wordMatchScore *= 1.5; // 1.5x for 5-letter words
-  }
-  
-  // Coverage bonus: if words cover significant portion of text
-  const coverageRatio = totalWordCoverage / text.length;
-  if (coverageRatio > 0.6) {
-    wordMatchScore *= 1.5; // 50% bonus if >60% text is real words
-  } else if (coverageRatio > 0.4) {
-    wordMatchScore *= 1.3; // 30% bonus if >40% text is real words
-  }
-  
-  score += Math.min(25, wordMatchScore);
+
   
   // BONUS: Vowel-Consonant Pattern Analysis (Indonesian naturally alternates V-C)
   const vowels = 'aiueo';
@@ -434,8 +459,15 @@ export function detectBestPatterns(ciphertext, blockSize, topN = 10) {
     });
   });
   
-  // Sort by score (highest first)
-  results.sort((a, b) => b.score - a.score);
+  // Sort by score (highest first), but randomize results with same score for variety
+  results.sort((a, b) => {
+    const scoreDiff = b.score - a.score;
+    // If scores are very close (within 0.1%), add randomness for variety
+    if (Math.abs(scoreDiff) < 0.5) {
+      return Math.random() - 0.5;
+    }
+    return scoreDiff;
+  });
   
   // Return top N results
   return results.slice(0, topN);
@@ -505,8 +537,53 @@ function geneticAlgorithmSearch(ciphertext, size, topN) {
   addPattern([...evens, ...odds]);
   
   // 9. MASSIVE random sampling (500+ unique patterns)
+  // STRATEGY 1: Add timestamp-based patterns for true randomness each run
+  const timestamp = Date.now();
+  for (let t = 0; t < 20; t++) { // 20 patterns instead of 10
+    const pattern = [...base];
+    // Seeded shuffle using timestamp
+    for (let j = pattern.length - 1; j > 0; j--) {
+      const seed = (timestamp + t * 1337 + j) % (j + 1);
+      const k = Math.floor((Math.random() + seed / 100) * (j + 1)) % (j + 1);
+      [pattern[j], pattern[k]] = [pattern[k], pattern[j]];
+    }
+    addPattern(pattern);
+  }
+  
+  // STRATEGY 2: Add patterns with specific swap strategies (high diversity)
+  // Try common transposition patterns: swap pairs, reverse sections, rotate
+  for (let i = 0; i < Math.min(50, size * 3); i++) {
+    const pattern = [...base];
+    
+    // Strategy A: Swap random pairs (50% of time)
+    if (Math.random() < 0.5) {
+      const swaps = Math.floor(Math.random() * (size / 2)) + 1;
+      for (let s = 0; s < swaps; s++) {
+        const i1 = Math.floor(Math.random() * size);
+        const i2 = Math.floor(Math.random() * size);
+        [pattern[i1], pattern[i2]] = [pattern[i2], pattern[i1]];
+      }
+    } 
+    // Strategy B: Reverse a section (30% of time)
+    else if (Math.random() < 0.6) {
+      const start = Math.floor(Math.random() * (size / 2));
+      const end = start + Math.floor(Math.random() * (size - start));
+      const section = pattern.slice(start, end + 1).reverse();
+      pattern.splice(start, section.length, ...section);
+    }
+    // Strategy C: Rotate/shift (20% of time)
+    else {
+      const shift = Math.floor(Math.random() * size);
+      const rotated = [...pattern.slice(shift), ...pattern.slice(0, shift)];
+      pattern.splice(0, size, ...rotated);
+    }
+    
+    addPattern(pattern);
+  }
+  
+  // STRATEGY 3: Pure random sampling (MASSIVELY increased from 500 to 2000!)
   let randomAttempts = 0;
-  const maxRandom = 500;
+  const maxRandom = 2000; // 4x ORIGINAL! MAXIMUM COVERAGE!
   while (allPatterns.size < maxRandom && randomAttempts < maxRandom * 3) {
     randomAttempts++;
     const pattern = [...base];

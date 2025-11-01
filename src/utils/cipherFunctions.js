@@ -176,14 +176,13 @@ function randomTranspositionDecode(text, blockSize, pattern) {
     
     // If block is complete, reverse transpose with pattern
     if (block.length === size) {
-      const decodedBlock = new Array(block.length);
+      const decodedBlock = new Array(size);
       
-      // Reverse transpose: put each char back to where it came from
-      // If encode pattern[j] = k (0-based), it means original[k] was moved to cipher position[j]
-      // So to decode: cipher[j] should go back to original position[k]
-      for (let j = 0; j < patternArray.length; j++) {
-        const originalPosition = patternArray[j];
-        decodedBlock[originalPosition] = block[j];
+      // CORRECT decoding logic:
+      // If encode did: result[j] = original[pattern[j]]
+      // Then decode should: result[pattern[j]] = cipher[j]
+      for (let j = 0; j < size; j++) {
+        decodedBlock[patternArray[j]] = block[j];
       }
       
       result += decodedBlock.join('');

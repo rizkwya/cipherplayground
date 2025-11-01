@@ -148,6 +148,142 @@ export const INDONESIAN_WORDS = [
   
   // Reading & Entertainment
   'novel', 'komik', 'manga', 'majalah', 'koran', 'artikel', 'puisi', 'cerpen',
+  
+  // ===== EXPANDED VOCABULARY (650+ NEW WORDS!) =====
+  
+  // Kata Kerja (Action Verbs) - 150+ words
+  'mengerjakan', 'melakukan', 'membuat', 'membangun', 'menciptakan', 'menghasilkan',
+  'menyelesaikan', 'memulai', 'mengakhiri', 'melanjutkan', 'menghentikan',
+  'meningkatkan', 'menurunkan', 'memperbaiki', 'merusak', 'menghancurkan',
+  'menyimpan', 'menghapus', 'menghilangkan', 'membuang', 'mengambil',
+  'memberikan', 'menerima', 'mengirim', 'mengantarkan', 'menyerahkan',
+  'meminjam', 'mengembalikan', 'membeli', 'menjual', 'membayar',
+  'menggunakan', 'memakai', 'memanfaatkan', 'melepas', 'memasang',
+  'membuka', 'menutup', 'mengunci', 'membukakan', 'menyalakan', 'mematikan',
+  'menghidupkan', 'menyambungkan', 'memutuskan', 'menghubungkan',
+  'berbicara', 'berkata', 'bercerita', 'bertanya', 'menjawab', 'menjelaskan',
+  'mengatakan', 'memberitahu', 'mengumumkan', 'menyampaikan', 'melaporkan',
+  'berpikir', 'mempertimbangkan', 'merencanakan', 'bermimpi', 'berharap',
+  'mengingat', 'melupakan', 'mengetahui', 'memahami', 'mengerti',
+  'berjalan', 'berlari', 'berdiri', 'duduk', 'berbaring', 'tidur', 'bangun',
+  'pergi', 'datang', 'pulang', 'berangkat', 'tiba', 'sampai', 'melewati',
+  'naik', 'turun', 'masuk', 'keluar', 'lewat', 'melalui', 'memasuki',
+  'melihat', 'memandang', 'mengamati', 'memperhatikan', 'menatap',
+  'mendengar', 'mendengarkan', 'menyimak', 'memerhatikan',
+  'makan', 'memakan', 'minum', 'meminum', 'mencicipi', 'menelan',
+  'memasak', 'menggoreng', 'merebus', 'memanggang', 'menumis',
+  'membaca', 'menulis', 'menggambar', 'melukis', 'mengetik',
+  'belajar', 'mengajar', 'berdiskusi', 'berdebat', 'berargumen',
+  'bekerja', 'berusaha', 'mencoba', 'berupaya', 'berjuang',
+  'bermain', 'berolahraga', 'berlibur', 'berwisata', 'berkunjung',
+  'bertemu', 'berjumpa', 'berkenalan', 'berpisah', 'meninggalkan',
+  'mencintai', 'menyayangi', 'membenci', 'merindukan', 'mengkhawatirkan',
+  'menangis', 'tertawa', 'tersenyum', 'tersenyum', 'cemberut',
+  'berteriak', 'berbisik', 'bergumam', 'bersenandung', 'bernyanyi',
+  
+  // Kata Sifat (Adjectives) - 120+ words
+  'besar', 'kecil', 'sedang', 'raksasa', 'mini', 'jumbo', 'besar',
+  'tinggi', 'rendah', 'sedang', 'pendek', 'panjang', 'memanjang',
+  'lebar', 'sempit', 'luas', 'lapang', 'tebal', 'tipis', 'padat',
+  'berat', 'ringan', 'enteng', 'cepat', 'lambat', 'pelan', 'kilat',
+  'panas', 'dingin', 'hangat', 'sejuk', 'panas', 'suam',
+  'basah', 'kering', 'lembab', 'becek', 'berair', 'kental',
+  'keras', 'lunak', 'lembut', 'kasar', 'halus', 'licin', 'kesat',
+  'tajam', 'tumpul', 'runcing', 'rata', 'bergelombang', 'berlekuk',
+  'indah', 'cantik', 'rupawan', 'elok', 'molek', 'ayu',
+  'jelek', 'buruk', 'hodoh', 'kusam', 'suram', 'muram',
+  'ganteng', 'tampan', 'gagah', 'perkasa', 'jantan',
+  'bersih', 'kotor', 'jorok', 'kumuh', 'rapi', 'berantakan',
+  'wangi', 'harum', 'semerbak', 'bau', 'busuk', 'amis',
+  'manis', 'pahit', 'asin', 'asam', 'pedas', 'gurih', 'hambar',
+  'baik', 'bagus', 'hebat', 'mantap', 'keren', 'oke', 'josss',
+  'buruk', 'jelek', 'parah', 'rusak', 'hancur', 'bobrok',
+  'senang', 'gembira', 'bahagia', 'riang', 'ceria', 'suka',
+  'sedih', 'susah', 'duka', 'nestapa', 'pilu', 'haru',
+  'marah', 'geram', 'murka', 'berang', 'kesal', 'jengkel',
+  'takut', 'ngeri', 'seram', 'menakutkan', 'horor',
+  'berani', 'pemberani', 'gagah', 'penakut', 'cemas', 'khawatir',
+  'pintar', 'cerdas', 'pandai', 'genius', 'jenius', 'bodoh', 'tolol',
+  'rajin', 'tekun', 'giat', 'malas', 'males', 'ogah',
+  'kaya', 'tajir', 'mampu', 'miskin', 'papa', 'melarat',
+  'sehat', 'segar', 'bugar', 'sakit', 'pusing', 'demam',
+  'baru', 'anyar', 'modern', 'kuno', 'antik', 'jadul', 'lawas',
+  'penuh', 'sesak', 'padat', 'kosong', 'hampa', 'lowong',
+  'ramai', 'rame', 'sibuk', 'sepi', 'sunyi', 'hening', 'tenang',
+  
+  // Kata Benda (Nouns) - 200+ words
+  'universitas', 'institut', 'akademi', 'fakultas', 'jurusan', 'prodi',
+  'perpustakaan', 'laboratorium', 'auditorium', 'aula', 'balai',
+  'pemerintah', 'presiden', 'menteri', 'gubernur', 'bupati', 'walikota',
+  'polisi', 'tentara', 'dokter', 'perawat', 'bidan', 'apoteker',
+  'guru', 'dosen', 'profesor', 'rektor', 'dekan', 'kepala',
+  'direktur', 'manajer', 'supervisor', 'karyawan', 'pegawai', 'staf',
+  'pengusaha', 'pedagang', 'penjual', 'pembeli', 'pelanggan', 'konsumen',
+  'petani', 'nelayan', 'peternak', 'buruh', 'tukang', 'sopir',
+  'pilot', 'masinis', 'nahkoda', 'kapten', 'pelaut', 'pramugari',
+  'artis', 'penyanyi', 'aktor', 'aktris', 'pemain', 'bintang',
+  'atlet', 'pelatih', 'wasit', 'juri', 'komentator',
+  'wartawan', 'reporter', 'jurnalis', 'fotografer', 'kameramen',
+  'penulis', 'pengarang', 'sastrawan', 'penyair', 'novelis',
+  'programmer', 'developer', 'designer', 'engineer', 'teknisi',
+  'bank', 'teller', 'kasir', 'sekretaris', 'resepsionis',
+  'restoran', 'kafe', 'warung', 'kantin', 'kedai', 'gerai',
+  'toko', 'butik', 'minimarket', 'supermarket', 'plaza', 'mall',
+  'terminal', 'stasiun', 'bandara', 'pelabuhan', 'dermaga',
+  'jembatan', 'terowongan', 'gerbang', 'pagar', 'tembok',
+  'lapangan', 'stadion', 'arena', 'kolam', 'renang', 'pantai',
+  'hotel', 'penginapan', 'losmen', 'villa', 'resort', 'cottage',
+  'rumah', 'sakit', 'klinik', 'puskesmas', 'apotek', 'laboratorium',
+  'masjid', 'mushola', 'gereja', 'vihara', 'pura', 'kelenteng',
+  'museum', 'galeri', 'bioskop', 'teater', 'panggung',
+  'pabrik', 'gudang', 'workshop', 'bengkel', 'dealer',
+  'komputer', 'laptop', 'notebook', 'tablet', 'smartphone', 'handphone',
+  'processor', 'memory', 'hardisk', 'flashdisk', 'charger', 'baterai',
+  'keyboard', 'mouse', 'monitor', 'printer', 'scanner', 'speaker',
+  'kamera', 'foto', 'video', 'layar', 'touchscreen', 'wifi', 'bluetooth',
+  'internet', 'website', 'blog', 'email', 'chat', 'sosial', 'media',
+  'facebook', 'instagram', 'twitter', 'youtube', 'whatsapp', 'telegram',
+  'google', 'yahoo', 'microsoft', 'apple', 'android', 'windows',
+  'aplikasi', 'software', 'program', 'sistem', 'operasi', 'file',
+  'folder', 'dokumen', 'data', 'database', 'server', 'cloud',
+  'kendaraan', 'transportasi', 'mobil', 'motor', 'sepeda', 'skuter',
+  'truk', 'pickup', 'angkot', 'taksi', 'ojek', 'gojek', 'grab',
+  'kereta', 'api', 'commuter', 'subway', 'metro', 'tram',
+  'pesawat', 'terbang', 'helikopter', 'kapal', 'perahu', 'sampan',
+  'bensin', 'solar', 'premium', 'pertamax', 'oli', 'ban', 'velg',
+  'spion', 'lampu', 'sein', 'klakson', 'wiper', 'AC', 'kondisi',
+  'makanan', 'minuman', 'masakan', 'hidangan', 'menu', 'sajian',
+  'sarapan', 'makan', 'siang', 'malam', 'cemilan', 'snack',
+  'nasi', 'goreng', 'putih', 'uduk', 'kuning', 'rames',
+  'mie', 'goreng', 'rebus', 'ayam', 'bakso', 'soto',
+  'sate', 'gule', 'rendang', 'sop', 'rawon', 'sop',
+  'ayam', 'goreng', 'bakar', 'penyet', 'rica', 'geprek',
+  'ikan', 'goreng', 'bakar', 'pepes', 'pindang', 'asin',
+  'sayur', 'asem', 'lodeh', 'sop', 'capcay', 'tumis',
+  'tahu', 'tempe', 'goreng', 'bacem', 'mendoan', 'sumedang',
+  'buah', 'apel', 'jeruk', 'mangga', 'pisang', 'anggur',
+  'semangka', 'melon', 'pepaya', 'nanas', 'durian', 'rambutan',
+  'kopi', 'susu', 'teh', 'jus', 'juice', 'sirup', 'soda',
+  'air', 'mineral', 'putih', 'matang', 'mentah', 'es', 'dingin',
+  'roti', 'tawar', 'manis', 'bakar', 'isi', 'coklat', 'keju',
+  'kue', 'bolu', 'tart', 'cookies', 'biskuit', 'wafer',
+  'coklat', 'permen', 'permen', 'karet', 'lolipop', 'dodol',
+  
+  // Kata Hubung & Preposisi (Connectors) - 80+ words
+  'dengan', 'tanpa', 'untuk', 'bagi', 'kepada', 'terhadap',
+  'pada', 'di', 'ke', 'dari', 'daripada', 'oleh', 'tentang',
+  'dalam', 'luar', 'antara', 'diantara', 'sebelum', 'sesudah',
+  'selama', 'semasa', 'setelah', 'sejak', 'sampai', 'hingga',
+  'ketika', 'sewaktu', 'saat', 'waktu', 'kala', 'tatkala',
+  'karena', 'sebab', 'oleh', 'karena', 'akibat', 'sehingga',
+  'agar', 'supaya', 'biar', 'untuk', 'guna', 'demi',
+  'jika', 'kalau', 'kalo', 'bila', 'bilamana', 'apabila',
+  'seandainya', 'andai', 'andaikan', 'sekiranya', 'asalkan',
+  'meskipun', 'walaupun', 'walau', 'sekalipun', 'biarpun',
+  'tetapi', 'tapi', 'namun', 'akan', 'melainkan', 'kecuali',
+  'sedangkan', 'sementara', 'padahal', 'bahkan', 'malah', 'malahan',
+  'lagi', 'pula', 'lagipula', 'apalagi', 'terlebih', 'lebih',
+  'atau', 'ataupun', 'maupun',
   'blog', 'vlog', 'diary', 'jurnal', 'notes', 'catatan',
   
   // Outdoor Activities
@@ -558,7 +694,49 @@ export const INDONESIAN_WORD_PAIRS = [
   'main game', 'nonton film', 'dengerin musik', 'baca buku',
   'jalan-jalan', 'makan siang', 'makan malam', 'minum kopi',
   'lagi ngapain', 'lagi kerja', 'lagi belajar', 'lagi istirahat',
-  'capek banget', 'bosan banget', 'seneng banget', 'lucu banget'
+  'capek banget', 'bosan banget', 'seneng banget', 'lucu banget',
+  
+  // ===== 50+ NEW COMMON PHRASES =====
+  // Formal greetings & politeness
+  'selamat pagi', 'selamat siang', 'selamat sore', 'selamat malam',
+  'selamat datang', 'selamat jalan', 'selamat tinggal', 'sampai jumpa',
+  'terima kasih', 'sama sama', 'permisi dulu', 'maaf ya',
+  'tidak apa', 'tidak masalah', 'boleh tanya', 'bisa bantu',
+  
+  // Common questions
+  'apa kabar', 'kabar baik', 'gimana kabar', 'lagi dimana',
+  'lagi ngapain', 'udah makan', 'mau kemana', 'dari mana',
+  'kapan datang', 'kapan pulang', 'sudah belum', 'sudah selesai',
+  
+  // Time expressions
+  'besok pagi', 'besok siang', 'besok malam', 'kemarin sore',
+  'tadi pagi', 'tadi malam', 'nanti siang', 'nanti malam',
+  'minggu depan', 'bulan depan', 'tahun depan', 'minggu lalu',
+  
+  // Locations
+  'di rumah', 'di sekolah', 'di kampus', 'di kantor', 'di jalan',
+  'ke rumah', 'ke sekolah', 'ke kampus', 'ke kantor', 'ke pasar',
+  'dari rumah', 'dari sekolah', 'dari kampus', 'dari kantor',
+  
+  // Actions & states
+  'lagi belajar', 'lagi kerja', 'lagi makan', 'lagi tidur',
+  'mau makan', 'mau pulang', 'mau pergi', 'mau main',
+  'sudah selesai', 'sudah makan', 'sudah tidur', 'sudah sampai',
+  'belum selesai', 'belum makan', 'belum tidur', 'belum sampai',
+  
+  // Common expressions
+  'gak papa', 'gak apa', 'gak usah', 'gak perlu', 'gak mau',
+  'bisa gak', 'boleh gak', 'mau gak', 'tau gak', 'kenal gak',
+  'penting banget', 'bagus banget', 'enak banget', 'lucu banget',
+  'capek banget', 'males banget', 'bosan banget', 'seru banget',
+  
+  // University/work related
+  'tugas kuliah', 'ujian besok', 'kumpul tugas', 'belajar bareng',
+  'mau meeting', 'lagi meeting', 'kerja lembur', 'rapat kerja',
+  
+  // Casual conversation
+  'btw ya', 'oh iya', 'gitu ya', 'oke deh', 'sip dah',
+  'wah seru', 'wah keren', 'mantap jiwa', 'joss gandos'
 ];
 
 // HEXAGRAMS (6-letter sequences) - ULTRA RARE, ULTRA POWERFUL!

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import MethodDropdown from './components/MethodDropdown'
 import CaesarShiftSlider from './components/CaesarShiftSlider'
 import RailsSlider from './components/RailsSlider'
@@ -34,6 +34,11 @@ export default function App() {
   const [autoDetectResults, setAutoDetectResults] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [modalToast, setModalToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Reset auto-detect results when block size changes
+  useEffect(() => {
+    setAutoDetectResults(null);
+  }, [randomBlockSize]);
 
   const result = useMemo(
     () => {
@@ -128,7 +133,8 @@ export default function App() {
 
   const handleFindPatterns = () => {
     setShowPatternFinder(true);
-    setAutoDetectResults(null); // Reset auto-detect results
+    setAutoDetectResults(null); // Reset auto-detect results to show ALL permutations
+    setPatternSearch(''); // Reset search
   };
 
   const handleAutoDetect = () => {

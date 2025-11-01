@@ -423,7 +423,8 @@ export function detectBestPatterns(ciphertext, blockSize, topN = 10) {
   permutations.forEach(perm => {
     const patternStr = perm.join(',');
     const decoded = decodeWithPattern(cleanCiphertext, size, perm);
-    const score = scoreText(decoded);
+    // Use quickScore for consistency and accuracy!
+    const score = quickScore(decoded.toLowerCase().replace(/[^a-z]/g, ''));
     
     results.push({
       pattern: patternStr,

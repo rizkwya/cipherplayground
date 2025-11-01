@@ -595,9 +595,20 @@ function geneticAlgorithmSearch(ciphertext, size, topN) {
     addPattern(pattern);
   }
   
-  // Get top N unique patterns
+  // Get top N unique patterns with SMART RANDOMIZATION
+  // Add timestamp to ensure different results each run
+  const runTimestamp = Date.now() + Math.random() * 1000;
+  
   const sortedPatterns = Array.from(allPatterns.values())
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      // If scores are very close (within 2%), randomize order for variety!
+      if (Math.abs(scoreDiff) < 2.0) {
+        // Use timestamp + random for true randomness each run
+        return (Math.random() + (runTimestamp % 1000) / 1000) - 0.5;
+      }
+      return scoreDiff;
+    })
     .slice(0, topN);
   
   // Return with confidence levels

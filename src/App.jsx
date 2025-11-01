@@ -11,6 +11,7 @@ import LyricFooter from './components/LyricFooter'
 import ExampleDropdown from './components/ExampleDropdown'
 import Toast from './components/Toast'
 import { ALPHA_LOWER, transform, ciphertextAlphabet } from './utils/cipherFunctions'
+import { detectBestPatterns } from './utils/patternDetector'
 
 export default function App() {
   const [mode, setMode] = useState('encode');
@@ -30,6 +31,9 @@ export default function App() {
   const [randomPaddingEnabled, setRandomPaddingEnabled] = useState(false);
   const [showPatternFinder, setShowPatternFinder] = useState(false);
   const [patternSearch, setPatternSearch] = useState('');
+  const [autoDetectResults, setAutoDetectResults] = useState(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [modalToast, setModalToast] = useState({ show: false, message: '', type: 'success' });
 
   const result = useMemo(
     () => {
@@ -124,12 +128,99 @@ export default function App() {
 
   const handleFindPatterns = () => {
     setShowPatternFinder(true);
+    setAutoDetectResults(null); // Reset auto-detect results
+  };
+
+  const handleAutoDetect = () => {
+    if (!text || !randomBlockSize) return;
+    
+    setIsDetecting(true);
+    setModalToast({ show: false, message: '', type: 'success' }); // Reset toast
+    
+    // Use setTimeout to allow UI to update
+    setTimeout(() => {
+      const results = detectBestPatterns(text, randomBlockSize, 10);
+      setAutoDetectResults(results);
+      setIsDetecting(false);
+      
+      if (results.length > 0 && results[0].score > 0) {
+        setModalToast({ 
+          show: true, 
+          message: `🎯 Found ${results.length} potential patterns!`, 
+          type: 'success' 
+        });
+      } else {
+        setModalToast({ 
+          show: true, 
+          message: '⚠️ No confident patterns detected', 
+          type: 'warning' 
+        });
+      }
+      
+      // Auto-hide toast after 2 seconds (same as Toast.jsx)
+      setTimeout(() => {
+        setModalToast({ show: false, message: '', type: 'success' });
+      }, 2000);
+    }, 100);
   };
 
   const handleUsePattern = (pattern) => {
     setRandomPattern(pattern);
     setShowPatternFinder(false);
     setToastInfo({ show: true, message: 'Pattern diterapkan!' });
+  };
+
+  const handleQuickAutoDetect = async () => {
+    if (!text || !randomBlockSize) return;
+    
+    setIsDetecting(true);
+    setShowPatternFinder(true); // Open modal
+    setAutoDetectResults([]); // Set empty array to prevent permutation generation!
+    
+    // Give UI time to render modal
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Process in chunks to prevent freeze
+    const processAsync = async () => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const results = detectBestPatterns(text, randomBlockSize, 10);
+          resolve(results);
+        }, 50);
+      });
+    };
+    
+    try {
+      const results = await processAsync();
+      setAutoDetectResults(results);
+      setIsDetecting(false);
+      
+      if (results.length > 0 && results[0].score > 0) {
+        setModalToast({ 
+          show: true, 
+          message: `🎯 Found ${results.length} potential patterns!`, 
+          type: 'success' 
+        });
+      } else {
+        setModalToast({ 
+          show: true, 
+          message: '⚠️ No confident patterns detected', 
+          type: 'warning' 
+        });
+      }
+      
+      // Auto-hide toast after 2 seconds
+      setTimeout(() => {
+        setModalToast({ show: false, message: '', type: 'success' });
+      }, 2000);
+    } catch {
+      setIsDetecting(false);
+      setModalToast({ 
+        show: true, 
+        message: '❌ Error detecting patterns', 
+        type: 'warning' 
+      });
+    }
   };
 
   return (
@@ -347,8 +438,8 @@ export default function App() {
                           for (let i = 0; i < demoText.length; i += size) {
                             blocks.push(demoText.slice(i, i + size));
                           }                          return (
-                            <div className="max-h-[220px] overflow-y-auto">
-                              <div className="grid-scroll overflow-x-auto">
+                            <div className="max-h-[220px] overflow-y-auto overscroll-contain">
+                              <div className="grid-scroll overflow-x-auto overscroll-contain">
                                 <div className="space-y-4">
                               {blocks.map((block, blockIdx) => {
                                 let transposed = '';
@@ -478,7 +569,7 @@ export default function App() {
                                 </div>
                                 
                                 {/* Grid */}
-                                <div className="max-h-[140px] overflow-y-auto">
+                                <div className="max-h-[140px] overflow-y-auto overscroll-contain">
                                   <div className="grid-scroll max-w-[280px]">
                                     <div className="space-y-0.5">
                                       {Array.from({ length: numRows }, (_, r) => (
@@ -520,7 +611,7 @@ export default function App() {
                           return (
                             <>
                               {/* Key header with numbers */}
-                              <div className="mb-3 overflow-x-auto max-h-[120px] overflow-y-auto">
+                              <div className="mb-3 overflow-x-auto max-h-[120px] overflow-y-auto overscroll-contain">
                                 {(() => {
                                   const chunks = [];
                                   for (let i = 0; i < numCols; i += 10) {
@@ -552,7 +643,7 @@ export default function App() {
                               </div>
                               
                               {/* Grid */}
-                              <div className="max-h-[140px] overflow-y-auto">
+                              <div className="max-h-[140px] overflow-y-auto overscroll-contain">
                                 <div className="grid-scroll max-w-[280px]">
                                   <div className="space-y-0.5">
                                     {Array.from({ length: numRows }, (_, r) => (
@@ -577,7 +668,7 @@ export default function App() {
                               <div className="mt-3 pt-3 border-t border-slate-300">
                                 <div className="text-xs text-slate-600">
                                   <strong>{mode === 'encode' ? 'Urutan baca kolom:' : 'Urutan taruh kolom:'}</strong>
-                                  <div className="max-h-18 overflow-y-auto mt-1">
+                                  <div className="max-h-18 overflow-y-auto mt-1 overscroll-contain">
                                     <div className="space-y-0.5">
                                       {(() => {
                                         const sortedItems = keyWithRank
@@ -650,26 +741,52 @@ export default function App() {
                     {/* Pattern Finder Button - Only show in decode mode */}
                     {mode === 'decode' && (
                       <div>
-                        <Button 
-                          variant="secondary" 
-                          onClick={handleFindPatterns}
-                          disabled={!text || !randomBlockSize || parseInt(randomBlockSize) < 2 || parseInt(randomBlockSize) > 8}
-                        >
-                          🔍 Find All Patterns
-                        </Button>
+                        <div className="flex gap-2">
+                          {/* Find All Patterns - Only for block size 2-6 */}
+                          {parseInt(randomBlockSize) >= 2 && parseInt(randomBlockSize) <= 6 && (
+                            <Button 
+                              variant="secondary" 
+                              onClick={handleFindPatterns}
+                              disabled={!text || !randomBlockSize}
+                            >
+                              🔍 Find All Patterns
+                            </Button>
+                          )}
+                          
+                          {/* Auto-detect Best Pattern - Only show for block size 7-26 */}
+                          {parseInt(randomBlockSize) >= 7 && parseInt(randomBlockSize) <= 26 && (
+                            <Button 
+                              variant="primary" 
+                              onClick={handleQuickAutoDetect}
+                              disabled={!text || !randomBlockSize || isDetecting}
+                            >
+                              {isDetecting ? '🔄 Detecting...' : '⚡ Auto-detect Best'}
+                            </Button>
+                          )}
+                        </div>
                         {(!text || !randomBlockSize) && (
                           <div className="text-amber-600 text-xs mt-2">
-                            💡 Masukkan ciphertext dan block size untuk mencari semua kemungkinan pattern
+                            💡 Masukkan ciphertext dan block size untuk mencari pattern
                           </div>
                         )}
-                        {text && randomBlockSize && parseInt(randomBlockSize) === 8 && (
+                        {text && randomBlockSize && parseInt(randomBlockSize) >= 2 && parseInt(randomBlockSize) <= 6 && (
+                          <div className="text-slate-600 text-xs mt-2">
+                            🔍 Block size {randomBlockSize}: Bisa cari semua {(() => {
+                              const n = parseInt(randomBlockSize);
+                              let factorial = 1;
+                              for (let i = 2; i <= n; i++) factorial *= i;
+                              return factorial.toLocaleString();
+                            })()} patterns secara manual
+                          </div>
+                        )}
+                        {text && randomBlockSize && parseInt(randomBlockSize) >= 7 && parseInt(randomBlockSize) <= 26 && (
                           <div className="text-amber-600 text-xs mt-2">
-                            ⚠️ Block size 8 akan generate 40,320 patterns. Ini mungkin membutuhkan waktu 2-5 detik.
+                            ⚡ Block size {randomBlockSize} terlalu besar untuk cari manual. Gunakan Auto-detect untuk menemukan pattern terbaik!
                           </div>
                         )}
-                        {text && randomBlockSize && parseInt(randomBlockSize) > 8 && (
+                        {text && randomBlockSize && parseInt(randomBlockSize) > 26 && (
                           <div className="text-red-600 text-xs mt-2">
-                            🚫 Block size terlalu besar! Pattern finder hanya support block size 2-8.<br/>
+                            🚫 Block size maksimal adalah 26 (jumlah huruf alfabet)
                           </div>
                         )}
                       </div>
@@ -844,6 +961,15 @@ export default function App() {
       {/* Pattern Finder Modal */}
       {showPatternFinder && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 md:p-6">
+          {/* Modal Toast Notification - Glass theme style */}
+          <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-60 px-5 py-3 rounded-2xl text-sm font-medium
+                          bg-violet-500/20 backdrop-blur-xl border border-violet-300/30 text-white
+                          shadow-2xl shadow-violet-500/30
+                          transition-all duration-300 ease-in-out whitespace-nowrap
+                          ${modalToast.show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
+            {modalToast.message}
+          </div>
+          
           <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-[85vw] md:max-w-3xl lg:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="bg-linear-to-r from-violet-600 to-fuchsia-600 p-3 sm:p-4 md:p-5 text-white shrink-0">
@@ -875,8 +1001,26 @@ export default function App() {
               </div>
             </div>
 
-            {/* Search Box */}
+            {/* Search Box & Auto-detect Button */}
             <div className="px-3 sm:px-4 md:px-5 pt-2 sm:pt-3 pb-2 shrink-0">
+              <div className="flex gap-2 mb-2">
+                <button
+                  onClick={handleAutoDetect}
+                  disabled={isDetecting || !text || !randomBlockSize}
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition shrink-0 ${
+                    isDetecting || !text || !randomBlockSize
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-linear-to-r from-fuchsia-500 to-violet-500 text-white hover:shadow-lg'
+                  }`}
+                >
+                  {isDetecting ? '🔄 Detecting...' : '🎯 Auto-detect'}
+                </button>
+                {autoDetectResults && (
+                  <span className="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-xs sm:text-sm font-medium flex items-center">
+                    ✓ {autoDetectResults.length} patterns found
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type="text"
@@ -902,12 +1046,66 @@ export default function App() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-5 pb-3 sm:pb-4 overscroll-contain">
               <div className="space-y-2">
                 {(() => {
                   const size = parseInt(randomBlockSize);
                   if (isNaN(size) || size < 2) return <p className="text-slate-500">Invalid block size</p>;
                   
+                  // Show loading state while detecting
+                  if (isDetecting) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mb-4"></div>
+                        <p className="text-sm font-medium">🔍 Detecting best patterns...</p>
+                        <p className="text-xs mt-2">This may take a moment for large block sizes</p>
+                      </div>
+                    );
+                  }
+                  
+                  // If auto-detect results exist, show them instead of all permutations
+                  if (autoDetectResults && autoDetectResults.length > 0) {
+                    return autoDetectResults.map((result, idx) => (
+                      <div
+                        key={idx}
+                        className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border-2 border-slate-200 hover:border-violet-400 hover:bg-violet-50/50 transition cursor-pointer gap-2"
+                        onClick={() => handleUsePattern(result.pattern)}
+                      >
+                        <div className="flex-1 min-w-0 w-full">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-mono font-bold text-violet-600 text-xs sm:text-sm">
+                              {result.pattern}
+                            </span>
+                            <span className="text-[10px] sm:text-xs text-slate-400">
+                              #{idx + 1}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              result.score >= 80 ? 'bg-green-100 text-green-700' :
+                              result.score >= 60 ? 'bg-blue-100 text-blue-700' :
+                              result.score >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {result.score}% • {result.confidence}
+                            </span>
+                          </div>
+                          <div className="font-mono text-xs sm:text-sm text-slate-700 break-all leading-relaxed">
+                            {result.decoded}
+                          </div>
+                        </div>
+                        <button
+                          className="px-2.5 sm:px-3 py-1.5 bg-linear-to-r from-violet-500 to-fuchsia-500 text-white rounded-md sm:rounded-lg text-[10px] sm:text-xs font-medium sm:opacity-0 sm:group-hover:opacity-100 transition whitespace-nowrap self-end sm:self-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUsePattern(result.pattern);
+                          }}
+                        >
+                          Use This
+                        </button>
+                      </div>
+                    ));
+                  }
+                  
+                  // Normal view: show all permutations
                   const permutations = generatePermutations(size);
                   const ciphertext = text.replace(/\s/g, '');
                   

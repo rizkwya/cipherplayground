@@ -11,7 +11,7 @@
 [![Vite](https://img.shields.io/badge/Vite-6-646cff?logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 
-[Live Demo](https://cipher-playground.vercel.app) • [Report Bug](https://github.com/rizkwya/cipher-playground/issues)
+[Live Demo](https://cipherplayground.vercel.app) • [Report Bug](https://github.com/rizkwya/cipherplayground/issues)
 </div>
 
 ---
@@ -38,10 +38,10 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/rizkwya/cipher-playground.git
+git clone https://github.com/rizkwya/cipherplayground.git
 
 # Navigate to project directory
-cd cipher-playground
+cd cipherplayground
 
 # Install dependencies
 npm install
@@ -88,7 +88,7 @@ Visit `http://localhost:5173` in your browser.
 ## 📂 Project Structure
 
 ```
-cipher-playground/
+cipherplayground/
 ├── public/
 │   └── logocp-min.png        # App logo
 ├── src/

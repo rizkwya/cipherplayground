@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 // color: 'red' for error, else default
 function getBg(color) {
     if (color === 'red') return 'bg-red-600';
+    if (color === 'green') return 'bg-green-600';
+    if (color === 'amber') return 'bg-amber-500';
     return 'bg-gradient-to-r from-violet-500 to-fuchsia-500';
 }
 

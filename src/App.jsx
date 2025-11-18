@@ -3,6 +3,7 @@ import { exportToExcel } from './utils/excelExport';
 import { generateConsistentFileName } from './utils/generateConsistentFileName';
 import { showError } from './utils/showError';
 import { parsePdfFile } from './utils/parsePdfFile';
+import { parsePptxFile } from './utils/parsePptxFile';
 import { downloadPDF } from './utils/downloadPDF';
 import { downloadDocx } from './utils/downloadDocx';
 import ExcelJS from 'exceljs';
@@ -46,6 +47,7 @@ export default function App() {
   const [isDetecting, setIsDetecting] = useState(false);
   const [modalToast, setModalToast] = useState({ show: false, message: '', type: 'success' });
   const [vigenereKey, setVigenereKey] = useState('ADEL');
+  const [suppressOutput, setSuppressOutput] = useState(false);
   // intentionally unused file input state (kept for future): prefix with underscore to satisfy lint
   const [_fileInput, _setFileInput] = useState(null);
 
@@ -53,6 +55,18 @@ export default function App() {
   useEffect(() => {
     setAutoDetectResults(null);
   }, [randomBlockSize]);
+
+  // Listen for global showError events (utils/showError) and show toast
+  useEffect(() => {
+    const handler = (e) => {
+      const d = e && e.detail ? e.detail : null;
+      if (d && d.message) {
+        setToastInfo({ show: true, message: d.message, color: d.color || 'red' });
+      }
+    };
+    window.addEventListener('app-toast', handler);
+    return () => window.removeEventListener('app-toast', handler);
+  }, []);
 
   // Download dropdown state (like ExampleDropdown)
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
@@ -91,9 +105,13 @@ export default function App() {
     
     setText(currentResult);
     setMode(newMode);
+    // If user explicitly changes mode, show output again
+    setSuppressOutput(false);
   };
   
   const handleTextChange = (e) => {
+    // User edited input — resume showing output
+    setSuppressOutput(false);
     setText(e.target.value);
     if (mode === 'encode') {
       setGridText(e.target.value);
@@ -266,7 +284,12 @@ export default function App() {
         const text = await file.text();
         // Validate structure: must have PARAMETERS, INPUT, OUTPUT
         if (!/PARAMETERS/i.test(text) || !/INPUT/i.test(text) || !/OUTPUT/i.test(text)) {
-          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          // Not a structured export — load as plain text into input only.
+          // Do NOT change mode or auto-run encode/decode; suppress output until user acts.
+          setText(text);
+          if (mode === 'encode') setGridText(text);
+          setSuppressOutput(true);
+          setToastInfo({ show: true, message: 'Text TXT dimuat ke input.', });
           return;
         }
         parseTxtFile(text);
@@ -278,7 +301,12 @@ export default function App() {
           valid = obj && typeof obj === 'object' && obj.metadata && (obj.input !== undefined) && (obj.output !== undefined);
   } catch { /* ignore JSON parse error */ }
         if (!valid) {
-          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          // Not a structured export — load as plain text into input only.
+          // Do NOT change mode or auto-run encode/decode; suppress output until user acts.
+          setText(text);
+          if (mode === 'encode') setGridText(text);
+          setSuppressOutput(true);
+          setToastInfo({ show: true, message: 'Text JSON dimuat ke input.', });
           return;
         }
         parseJsonFile(text);
@@ -301,6 +329,29 @@ export default function App() {
           }
   } catch { /* ignore Excel parse error */ }
         if (!valid) {
+          // Fallback: extract plain text from workbook (all cells) and load into input
+          try {
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.load(arrayBuffer);
+            let extracted = '';
+            workbook.eachSheet((sheet) => {
+              sheet.eachRow((row) => {
+                const values = row.values ? Array.from(row.values).slice(1) : [];
+                extracted += values.map(v => (v && v.toString) ? v.toString() : '').join(' ') + '\n';
+              });
+              extracted += '\n';
+            });
+            extracted = extracted.trim();
+            if (extracted) {
+              setText(extracted);
+              if (mode === 'encode') setGridText(extracted);
+              setSuppressOutput(true);
+              setToastInfo({ show: true, message: 'Text XLSX dimuat ke input.', });
+              return;
+            }
+          } catch {
+            // fall through to generic error below
+          }
           setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
           return;
         }
@@ -308,18 +359,35 @@ export default function App() {
       } else if (ext === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         let valid = false;
+        let docxHtml = '';
         try {
-          const { value } = await mammoth.convertToHtml({ arrayBuffer });
+          const res = await mammoth.convertToHtml({ arrayBuffer });
+          docxHtml = (res && res.value) ? res.value : '';
           const div = document.createElement('div');
-          div.innerHTML = value;
+          div.innerHTML = docxHtml;
           const tables = div.querySelectorAll('table');
           if (tables.length >= 2) {
             const metaHeader = tables[0].querySelector('tr td');
             const ioHeader = tables[1].querySelector('tr td');
             valid = metaHeader && /parameter/i.test(metaHeader.innerText) && ioHeader && /type/i.test(ioHeader.innerText);
           }
-  } catch { /* ignore DOCX parse error */ }
+        } catch { /* ignore DOCX parse error */ }
         if (!valid) {
+          // Fallback: use mammoth HTML -> plain text (docxHtml captured above)
+          try {
+            const div = document.createElement('div');
+            div.innerHTML = docxHtml || '';
+            const extracted = (div.innerText || '').trim();
+            if (extracted) {
+              setText(extracted);
+              if (mode === 'encode') setGridText(extracted);
+              setSuppressOutput(true);
+              setToastInfo({ show: true, message: 'Text DOCX dimuat ke input.', });
+              return;
+            }
+          } catch {
+            // ignore
+          }
           setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
           return;
         }
@@ -329,19 +397,45 @@ export default function App() {
         // Copy ArrayBuffer byte-per-byte ke Uint8Array untuk menghindari detached buffer (Windows/Chrome)
         const bufferCopy = new Uint8Array(arrayBuffer.byteLength);
         bufferCopy.set(new Uint8Array(arrayBuffer));
-        let valid = false;
         try {
-          const { meta, inputText, outputText } = await parsePdfFile(bufferCopy);
-          // Minimal: meta dan input/output harus ada
-          valid = meta && Object.keys(meta).length > 0 && inputText && outputText;
-        } catch { /* ignore PDF parse error */ }
-        if (!valid) {
+          const { meta, inputText, outputText, fullText } = await parsePdfFile(bufferCopy);
+          const valid = meta && Object.keys(meta).length > 0 && inputText && outputText;
+          if (!valid) {
+            // Fallback: load extracted PDF text into input
+            const fallback = (fullText || '').trim();
+            if (fallback) {
+              setText(fallback);
+              if (mode === 'encode') setGridText(fallback);
+              setSuppressOutput(true);
+              setToastInfo({ show: true, message: 'Text PDF dimuat ke input.', });
+            } else {
+              setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+            }
+            return;
+          }
+          applyParsedMeta(meta, inputText, outputText);
+          setToastInfo({ show: true, message: 'File PDF berhasil diupload!' });
+        } catch {
           setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
           return;
         }
-        const { meta, inputText, outputText } = await parsePdfFile(bufferCopy);
-        applyParsedMeta(meta, inputText, outputText);
-        setToastInfo({ show: true, message: 'File PDF berhasil diupload!' });
+      } else if (ext === 'pptx') {
+        // Robust PPTX extraction using JSZip/XML parsing
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const { text: extracted, slides } = await parsePptxFile(arrayBuffer);
+          if (extracted && extracted.trim()) {
+            setText(extracted);
+            if (mode === 'encode') setGridText(extracted);
+            setSuppressOutput(true);
+            setToastInfo({ show: true, message: `Text dari PPTX dimuat ke input.`,});
+            return;
+          }
+        } catch (err) {
+          // fall through to generic error
+        }
+        setToastInfo({ show: true, message: 'Format PPTX tidak dapat diparsing.', color: 'red' });
+        return;
       } else {
         showError('Format file tidak didukung.');
       }
@@ -770,7 +864,7 @@ export default function App() {
                     <span className="font-semibold">Upload</span>
                     <input
                       type="file"
-                      accept=".txt,.md,.json,.pdf,.docx,.xlsx,*"
+                      accept=".txt,.md,.json,.pdf,.docx,.xlsx,.pptx,*"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -1132,7 +1226,30 @@ export default function App() {
                       <div className="text-xs leading-relaxed font-mono">
                         {(() => {
                           const key = (vigenereKey || 'ADEL').toUpperCase();
-                          const demoText = (text || 'STACK UNIVERSAL').toUpperCase().replace(/[^A-Z]/g, '');
+                          // Determine demo plaintext and ciphertext based on mode and whether user supplied text
+                          const hasUserText = text && text.trim().length > 0;
+                          const defaultPlain = 'STACK UNIVERSAL';
+                          const demoPlain = hasUserText && mode === 'encode' ? text : (!hasUserText ? defaultPlain : '');
+                          const demoPlainClean = demoPlain ? demoPlain.toUpperCase().replace(/[^A-Z]/g, '') : '';
+
+                          // Precompute ciphertext from demoPlainClean (used when we need a ciphertext to demo decryption)
+                          const repeatedKeyForPlain = demoPlainClean ? key.repeat(Math.ceil(demoPlainClean.length / key.length)).slice(0, demoPlainClean.length) : '';
+                          let ciphertextForDemo = '';
+                          if (demoPlainClean) {
+                            for (let i = 0; i < demoPlainClean.length; i++) {
+                              const p = demoPlainClean.charCodeAt(i) - 65;
+                              const k = repeatedKeyForPlain.charCodeAt(i) - 65;
+                              ciphertextForDemo += String.fromCharCode(65 + ((p + k) % 26));
+                            }
+                          }
+
+                          
+                          let demoText = '';
+                          if (mode === 'encode') {
+                            demoText = demoPlainClean;
+                          } else {
+                            demoText = hasUserText ? text.toUpperCase().replace(/[^A-Z]/g, '') : (ciphertextForDemo || demoPlainClean);
+                          }
                           if (!demoText) {
                             return (
                               <div className="text-center py-8 text-slate-500">
@@ -1626,7 +1743,7 @@ export default function App() {
           <div className="w-full lg:w-[340px] shrink-0">
              <TextAreaCard
                 label={mode === 'encode' ? 'Ciphertext' : 'Plaintext'}
-                value={result}
+               value={suppressOutput ? '' : result}
                 onChange={undefined}
                 readOnly={true}
                 placeholder={mode === 'encode' ? "Hasil enkripsi..." : "Hasil dekripsi..."}

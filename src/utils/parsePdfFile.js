@@ -60,5 +60,5 @@ export async function parsePdfFile(arrayBuffer) {
   }
   inputText = inputText.trim();
   outputText = outputText.trim();
-  return { meta, inputText, outputText };
+  return { meta, inputText, outputText, fullText: text };
 }

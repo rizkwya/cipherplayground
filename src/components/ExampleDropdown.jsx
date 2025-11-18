@@ -17,12 +17,13 @@ function ExampleDropdown({ onSelectExample }) {
   }, [isOpen]);
 
   const examples = [
-    { name: 'Atbash', method: 'atbash', text: 'satu BotoL Jameson', shift: null, rails: 3, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
-    { name: 'ROT13', method: 'rot13', text: 'never stop flying!', shift: 13, rails: 3, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
-    { name: 'Caesar', method: 'caesar', text: 'jangan lupa jam dua pagi nanti', shift: 5, rails: 3, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
-    { name: 'Columnar', method: 'columnar', text: 'informatika universitas mulia', shift: null, rails: 3, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
-    { name: 'Rail Fence', method: 'railfence', text: 'HELLO WORLD', shift: null, rails: 3, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
-    { name: 'Random Transposition', method: 'random', text: 'kerumah dong mumpung sepi nichh', shift: null, rails: 3, columnarKey: 'DAMN', randomBlockSize: '3', randomPattern: '3,1,2' },
+    { name: 'Atbash', method: 'atbash', text: 'satu BotoL Jameson', shift: null, rails: null, columnarKey: 'null', randomBlockSize: null, randomPattern: null },
+    { name: 'ROT13', method: 'rot13', text: 'never stop flying!', shift: 13, rails: null, columnarKey: 'null', randomBlockSize: null, randomPattern: null },
+    { name: 'Caesar', method: 'caesar', text: 'jangan lupa jam dua pagi nanti', shift: 5, rails: null, columnarKey: 'null', randomBlockSize: null, randomPattern: null },
+    { name: 'Columnar', method: 'columnar', text: 'informatika universitas mulia', shift: null, rails: null, columnarKey: 'DAMN', randomBlockSize: null, randomPattern: null },
+    { name: 'Rail Fence', method: 'railfence', text: 'HELLO WORLD', shift: null, rails: null, columnarKey: 'null', randomBlockSize: null, randomPattern: null },
+    { name: 'Random Transposition', method: 'random', text: 'kerumah dong mumpung sepi nichh', shift: null, rails: null, columnarKey: 'null', randomBlockSize: '3', randomPattern: '3,1,2' },
+    { name: 'Vigenère Cipher', method: 'vigenere', text: 'saya belajar kriptografi', shift: null, rails: null, columnarKey: 'null', randomBlockSize: null, randomPattern: null, vigenereKey: 'MULIA' },
   ];
 
   const handleSelect = (example) => {

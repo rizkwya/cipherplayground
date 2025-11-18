@@ -25,6 +25,62 @@ function caesarChar(ch, shift) {
     return null;
 }
 
+// Vigenère Cipher - Encode
+function vigenereEncode(text, key) {
+  if (!key || key.length === 0) return text;
+  
+  const keyUpper = key.toUpperCase().replace(/[^A-Z]/g, '');
+  if (keyUpper.length === 0) return text;
+  
+  let result = '';
+  let keyIndex = 0;
+  
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch >= 'A' && ch <= 'Z') {
+      const shift = keyUpper[keyIndex % keyUpper.length].charCodeAt(0) - 65;
+      result += String.fromCharCode(((ch.charCodeAt(0) - 65 + shift) % 26) + 65);
+      keyIndex++;
+    } else if (ch >= 'a' && ch <= 'z') {
+      const shift = keyUpper[keyIndex % keyUpper.length].charCodeAt(0) - 65;
+      result += String.fromCharCode(((ch.charCodeAt(0) - 97 + shift) % 26) + 97);
+      keyIndex++;
+    } else {
+      result += ch;
+    }
+  }
+  
+  return result;
+}
+
+// Vigenère Cipher - Decode
+function vigenereDecode(text, key) {
+  if (!key || key.length === 0) return text;
+  
+  const keyUpper = key.toUpperCase().replace(/[^A-Z]/g, '');
+  if (keyUpper.length === 0) return text;
+  
+  let result = '';
+  let keyIndex = 0;
+  
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch >= 'A' && ch <= 'Z') {
+      const shift = keyUpper[keyIndex % keyUpper.length].charCodeAt(0) - 65;
+      result += String.fromCharCode(((ch.charCodeAt(0) - 65 - shift + 26) % 26) + 65);
+      keyIndex++;
+    } else if (ch >= 'a' && ch <= 'z') {
+      const shift = keyUpper[keyIndex % keyUpper.length].charCodeAt(0) - 65;
+      result += String.fromCharCode(((ch.charCodeAt(0) - 97 - shift + 26) % 26) + 97);
+      keyIndex++;
+    } else {
+      result += ch;
+    }
+  }
+  
+  return result;
+}
+
 // Rail Fence Cipher - Encode
 function railFenceEncode(text, rails) {
   if (rails <= 1) return text;
@@ -391,7 +447,17 @@ function makeMapper(method, shift) {
   }
 }
 
-function transform(text, method, caseStrategy, foreignMode, shift, rails, columnarKey, mode, paddingEnabled = false, columnarKeyType = 'text', randomBlockSize = '4', randomPattern = '4,1,3,2', randomPaddingEnabled = false) {
+function transform(text, method, caseStrategy, foreignMode, shift, rails, columnarKey, mode, paddingEnabled = false, columnarKeyType = 'text', randomBlockSize = '4', randomPattern = '4,1,3,2', randomPaddingEnabled = false, vigenereKey = '') {
+  // Handle Vigenère cipher
+  if (method === 'vigenere') {
+    if (!vigenereKey || vigenereKey.length === 0) return text;
+    if (mode === 'encode') {
+      return vigenereEncode(text, vigenereKey);
+    } else {
+      return vigenereDecode(text, vigenereKey);
+    }
+  }
+  
   // Untuk transposisi cipher, proses berbeda (tidak terpengaruh foreignMode)
   if (method === 'railfence') {
     if (mode === 'encode') {
@@ -480,6 +546,8 @@ export {
   atbashChar,
   rot13Char,
   caesarChar,
+  vigenereEncode,
+  vigenereDecode,
   railFenceEncode,
   railFenceDecode,
   columnarEncode,

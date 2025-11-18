@@ -73,6 +73,7 @@ Visit `http://localhost:5173` in your browser.
 | **Columnar** | Transposes text based on key order | Text or numeric key |
 | **Rail Fence** | Writes text in zigzag pattern | Number of rails (2-10) |
 | **Random Transposition** | Block transposition with custom pattern | Block size & pattern |
+| **Vigenère** | Repeating-key polyalphabetic substitution | Key (letters) |
 
 ---
 
@@ -95,6 +96,8 @@ cipherplayground/
 │   ├── components/
 │   │   ├── CaesarShiftSlider.jsx
 │   │   ├── ColumnarKeyInput.jsx
+│   │   ├── Container.jsx
+│   │   ├── DownloadFormatDropdown.jsx
 │   │   ├── ExampleDropdown.jsx
 │   │   ├── MethodDropdown.jsx
 │   │   ├── ModeSwitcher.jsx
@@ -103,12 +106,21 @@ cipherplayground/
 │   │   ├── TextAreaCard.jsx
 │   │   ├── Toast.jsx
 │   │   ├── LyricFooter.jsx
-│   │   └── UIComponents.jsx
+│   │   ├── UIComponents.jsx
+│   │   └── VigenereKeyInput.jsx
 │   ├── utils/
-│   │   └── cipherFunctions.js  # Core cipher algorithms
-│   ├── App.jsx                 # Main application
-│   ├── main.jsx                # Entry point
-│   └── index.css               # Global styles
+│   │   ├── cipherFunctions.js      # Core cipher algorithms
+│   │   ├── dictionaryWords.js
+│   │   ├── downloadDocx.js
+│   │   ├── downloadPDF.js
+│   │   ├── excelExport.js
+│   │   ├── generateConsistentFileName.js
+│   │   ├── parsePdfFile.js
+│   │   ├── patternDetector.js
+│   │   └── showError.js
+│   ├── App.jsx                     # Main application
+│   ├── main.jsx                    # Entry point
+│   └── index.css                   # Global styles
 ├── index.html
 ├── package.json
 ├── vite.config.js

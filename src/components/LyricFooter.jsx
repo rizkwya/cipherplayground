@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from 'react'
 
 function LyricFooter() {
     const lyrics = useMemo(() => [
+        // Disclaimer, tampil paling awal dan paling lama
+        { text: "⚠️ Upload file harus sesuai dengan struktur web ini", speed: 1000 },
         { text: "-- 🎶 bergema sampai selamanya 🎶 -- ", speed: 80 },
         { text: "Aku ingin jadi teman nyamanmu", speed: 100 },
         { text: "Tempat kau hilangkan keluh kesahmu", speed: 100 },
@@ -53,11 +55,13 @@ function LyricFooter() {
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
                 <div className="rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center bg-white/40 border border-white/60 ring-1 ring-white/50 backdrop-blur shadow-[8px_8px_20px_rgba(0,0,0,0.08),-8px_-8px_20px_rgba(255,255,255,0.5)]">
                     <p className="text-xs sm:text-sm text-slate-600 h-4 sm:h-5 font-mono">
-                        {chars.map((char, index) => (
-                            <span key={index} className={index < visibleCount ? 'char-visible' : 'char-hidden'}>
+                        {currentLineIndex === 0
+                          ? lyrics[0].text
+                          : chars.map((char, index) => (
+                              <span key={index} className={index < visibleCount ? 'char-visible' : 'char-hidden'}>
                                 {char}
-                            </span>
-                        ))}
+                              </span>
+                            ))}
                     </p>
                 </div>
             </div>

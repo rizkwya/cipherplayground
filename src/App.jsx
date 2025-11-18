@@ -1,4 +1,12 @@
 import { useMemo, useState, useEffect } from 'react'
+import { exportToExcel } from './utils/excelExport';
+import { generateConsistentFileName } from './utils/generateConsistentFileName';
+import { showError } from './utils/showError';
+import { parsePdfFile } from './utils/parsePdfFile';
+import { downloadPDF } from './utils/downloadPDF';
+import { downloadDocx } from './utils/downloadDocx';
+import ExcelJS from 'exceljs';
+import mammoth from 'mammoth';
 import MethodDropdown from './components/MethodDropdown'
 import CaesarShiftSlider from './components/CaesarShiftSlider'
 import RailsSlider from './components/RailsSlider'
@@ -6,10 +14,13 @@ import ColumnarKeyInput from './components/ColumnarKeyInput'
 import RandomSeedInput from './components/RandomSeedInput'
 import ModeSwitcher from './components/ModeSwitcher'
 import { MonoBox, Card, Button } from './components/UIComponents'
+import DownloadFormatDropdown from './components/DownloadFormatDropdown.jsx';
 import TextAreaCard from './components/TextAreaCard'
 import LyricFooter from './components/LyricFooter'
+import Container from './components/Container'
 import ExampleDropdown from './components/ExampleDropdown'
 import Toast from './components/Toast'
+import VigenereKeyInput from './components/VigenereKeyInput'
 import { ALPHA_LOWER, transform, ciphertextAlphabet } from './utils/cipherFunctions'
 import { detectBestPatterns } from './utils/patternDetector'
 
@@ -34,20 +45,37 @@ export default function App() {
   const [autoDetectResults, setAutoDetectResults] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [modalToast, setModalToast] = useState({ show: false, message: '', type: 'success' });
+  const [vigenereKey, setVigenereKey] = useState('ADEL');
+  // intentionally unused file input state (kept for future): prefix with underscore to satisfy lint
+  const [_fileInput, _setFileInput] = useState(null);
 
   // Reset auto-detect results when block size changes
   useEffect(() => {
     setAutoDetectResults(null);
   }, [randomBlockSize]);
 
+  // Download dropdown state (like ExampleDropdown)
+  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (downloadDropdownOpen && !event.target.closest('.example-download-dropdown-container')) {
+        setDownloadDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [downloadDropdownOpen]);
+
   const result = useMemo(
     () => {
         const shiftAmount = mode === 'decode' && method === 'caesar' ? 26 - caesarShift : caesarShift;
         const activePadding = mode === 'encode' ? paddingEnabled : false;
         const activeRandomPadding = mode === 'encode' ? randomPaddingEnabled : false;
-        return transform(text, method, caseStrategy, foreignMode, shiftAmount, rails, columnarKey, mode, activePadding, columnarKeyType, randomBlockSize, randomPattern, activeRandomPadding);
+        return transform(text, method, caseStrategy, foreignMode, shiftAmount, rails, columnarKey, mode, activePadding, columnarKeyType, randomBlockSize, randomPattern, activeRandomPadding, vigenereKey);
     },
-    [text, method, caseStrategy, foreignMode, caesarShift, rails, columnarKey, mode, paddingEnabled, columnarKeyType, randomBlockSize, randomPattern, randomPaddingEnabled]
+    [text, method, caseStrategy, foreignMode, caesarShift, rails, columnarKey, mode, paddingEnabled, columnarKeyType, randomBlockSize, randomPattern, randomPaddingEnabled, vigenereKey]
   );
   
   const handleModeChange = (newMode) => {
@@ -72,7 +100,7 @@ export default function App() {
     }
   };
 
-  const handleSelectExample = ({ method, text, shift, rails, columnarKey, randomBlockSize, randomPattern }) => {
+  const handleSelectExample = ({ method, text, shift, rails, columnarKey, randomBlockSize, randomPattern, vigenereKey }) => {
     setMethod(method);
     setText(text);
     if (mode === 'encode') {
@@ -93,6 +121,9 @@ export default function App() {
     if (randomPattern) {
       setRandomPattern(randomPattern);
     }
+    if (vigenereKey) {
+      setVigenereKey(vigenereKey);
+    }
   };
 
   const ctAlpha = ciphertextAlphabet(method, caesarShift);
@@ -109,6 +140,345 @@ export default function App() {
         setToastInfo({ show: true, message: 'Gagal menyalin.' });
     });
   };
+  
+  // Modifikasi handleDownload untuk menerima format
+  const handleDownload = async (format) => {
+    if (!result) return;
+    // --- 1. Buat Metadata Laporan ---
+    const metadata = {
+      method: method.toUpperCase(),
+      mode: mode.toUpperCase(),
+    };
+    // Always include foreignMode for atbash, caesar, rot13
+    if (["atbash", "caesar", "rot13"].includes(method)) {
+      metadata.foreignMode = foreignMode;
+    }
+    // Always include caseStrategy for atbash, caesar
+    if (["atbash", "caesar"].includes(method)) {
+      metadata.caseStrategy = caseStrategy;
+    }
+    if (method === 'caesar') {
+      metadata.shift = caesarShift;
+    } else if (method === 'railfence') {
+      metadata.rails = rails;
+    } else if (method === 'columnar') {
+      metadata.key = columnarKey;
+      metadata.keyType = columnarKeyType;
+      metadata.addRandomPadding = paddingEnabled ? 'yes' : 'no';
+    } else if (method === 'vigenere') {
+      metadata.key = vigenereKey;
+    } else if (method === 'random') {
+      metadata.blockSize = randomBlockSize;
+      metadata.pattern = randomPattern;
+      metadata.addRandomPadding = randomPaddingEnabled ? 'yes' : 'no';
+    }
+
+    // --- 2. Buat Konten File Berdasarkan Format ---
+  let filename = generateConsistentFileName(format === 'xlsx' ? 'xlsx' : format, method, mode);
+
+    try {
+      if (format === 'xlsx') {
+        exportToExcel({ metadata, input: text, output: result, filename });
+        setToastInfo({ show: true, message: `File berhasil didownload sebagai XLSX!` });
+        return;
+      }
+      if (format === 'pdf') {
+        await downloadPDF({
+          content: result,
+          cipherMethod: method,
+          filename,
+          metadata,
+          input: text,
+          showError
+        });
+        setToastInfo({ show: true, message: `File berhasil didownload sebagai PDF!` });
+        return;
+      }
+      if (format === 'docx') {
+        await downloadDocx({ content: `${text}\n${result}`, filename, metadata, showError });
+        setToastInfo({ show: true, message: `File berhasil didownload sebagai DOCX!` });
+        return;
+      }
+      if (format === 'json') {
+        const jsonOutput = {
+          metadata: metadata,
+          input: text,
+          output: result
+        };
+        const blob = new Blob([JSON.stringify(jsonOutput, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setToastInfo({ show: true, message: `File berhasil didownload sebagai JSON!` });
+        return;
+      }
+      // TXT, default: structured like a table
+      let textTemplate = '';
+      textTemplate += '==============================\r\n';
+      textTemplate += 'CIPHER PLAYGROUND REPORT\r\n';
+      textTemplate += '==============================\r\n\r\n';
+      textTemplate += 'PARAMETERS\r\n';
+      textTemplate += '------------------------------\r\n';
+      // Format metadata as table
+      const metaKeys = Object.keys(metadata);
+      const maxKeyLen = Math.max(...metaKeys.map(k => k.length), 9);
+      metaKeys.forEach(k => {
+        const key = k.padEnd(maxKeyLen, ' ');
+        textTemplate += `${key} : ${metadata[k]}\r\n`;
+      });
+      textTemplate += '\r\n';
+      textTemplate += '------------------------------\r\n';
+      textTemplate += 'INPUT (Plaintext/Ciphertext)\r\n';
+      textTemplate += '------------------------------\r\n';
+      textTemplate += (text || '-') + '\r\n\r\n';
+      textTemplate += '------------------------------\r\n';
+      textTemplate += 'OUTPUT (Ciphertext/Plaintext)\r\n';
+      textTemplate += '------------------------------\r\n';
+      textTemplate += (result || '-') + '\r\n';
+      textTemplate += '==============================\r\n';
+      const blob = new Blob([textTemplate], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setToastInfo({ show: true, message: `File berhasil didownload sebagai ${format.toUpperCase()}!` });
+    } catch (error) {
+      showError('Gagal download: ' + error.message);
+    }
+  };
+
+  // Multi-format upload handler
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    try {
+      if (ext === 'txt') {
+        const text = await file.text();
+        // Validate structure: must have PARAMETERS, INPUT, OUTPUT
+        if (!/PARAMETERS/i.test(text) || !/INPUT/i.test(text) || !/OUTPUT/i.test(text)) {
+          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          return;
+        }
+        parseTxtFile(text);
+      } else if (ext === 'json') {
+        const text = await file.text();
+        let valid = false;
+        try {
+          const obj = JSON.parse(text);
+          valid = obj && typeof obj === 'object' && obj.metadata && (obj.input !== undefined) && (obj.output !== undefined);
+  } catch { /* ignore JSON parse error */ }
+        if (!valid) {
+          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          return;
+        }
+        parseJsonFile(text);
+      } else if (ext === 'xlsx') {
+        const arrayBuffer = await file.arrayBuffer();
+        let valid = false;
+        try {
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(arrayBuffer);
+          let sheet = workbook.getWorksheet('Cipher Report') || workbook.worksheets[0];
+          if (sheet) {
+            let foundMeta = false, foundIO = false;
+            sheet.eachRow((row) => {
+              const a = (row.getCell(1).value || '').toString().trim();
+              const b = (row.getCell(2).value || '').toString().trim();
+              if (/^parameter/i.test(a) && /^value/i.test(b)) foundMeta = true;
+              if (/^type/i.test(a) && /^text/i.test(b)) foundIO = true;
+            });
+            valid = foundMeta && foundIO;
+          }
+  } catch { /* ignore Excel parse error */ }
+        if (!valid) {
+          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          return;
+        }
+        parseXlsxFile(arrayBuffer);
+      } else if (ext === 'docx') {
+        const arrayBuffer = await file.arrayBuffer();
+        let valid = false;
+        try {
+          const { value } = await mammoth.convertToHtml({ arrayBuffer });
+          const div = document.createElement('div');
+          div.innerHTML = value;
+          const tables = div.querySelectorAll('table');
+          if (tables.length >= 2) {
+            const metaHeader = tables[0].querySelector('tr td');
+            const ioHeader = tables[1].querySelector('tr td');
+            valid = metaHeader && /parameter/i.test(metaHeader.innerText) && ioHeader && /type/i.test(ioHeader.innerText);
+          }
+  } catch { /* ignore DOCX parse error */ }
+        if (!valid) {
+          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          return;
+        }
+        parseDocxFile(arrayBuffer);
+      } else if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        // Copy ArrayBuffer byte-per-byte ke Uint8Array untuk menghindari detached buffer (Windows/Chrome)
+        const bufferCopy = new Uint8Array(arrayBuffer.byteLength);
+        bufferCopy.set(new Uint8Array(arrayBuffer));
+        let valid = false;
+        try {
+          const { meta, inputText, outputText } = await parsePdfFile(bufferCopy);
+          // Minimal: meta dan input/output harus ada
+          valid = meta && Object.keys(meta).length > 0 && inputText && outputText;
+        } catch { /* ignore PDF parse error */ }
+        if (!valid) {
+          setToastInfo({ show: true, message: 'Struktur tidak standar dengan web ini!', color: 'red' });
+          return;
+        }
+        const { meta, inputText, outputText } = await parsePdfFile(bufferCopy);
+        applyParsedMeta(meta, inputText, outputText);
+        setToastInfo({ show: true, message: 'File PDF berhasil diupload!' });
+      } else {
+        showError('Format file tidak didukung.');
+      }
+    } catch (e) {
+      showError('Gagal membaca file: ' + e.message);
+    }
+  };
+
+  // TXT parser
+  function parseTxtFile(text) {
+    // Ambil section PARAMETERS
+    const meta = {};
+    const lines = text.split(/\r?\n/);
+    let inMeta = false, inInput = false, inOutput = false;
+    let inputText = '', outputText = '';
+    for (let line of lines) {
+      if (/^PARAMETERS/i.test(line)) { inMeta = true; inInput = false; inOutput = false; continue; }
+      if (/^INPUT/i.test(line)) { inMeta = false; inInput = true; inOutput = false; continue; }
+      if (/^OUTPUT/i.test(line)) { inMeta = false; inInput = false; inOutput = true; continue; }
+      if (/^=+/.test(line) || /^-+/.test(line)) continue;
+      if (inMeta && /:/.test(line)) {
+        const [k, ...v] = line.split(':');
+        meta[k.trim().toLowerCase()] = v.join(':').trim();
+      } else if (inInput) {
+        inputText += line + '\n';
+      } else if (inOutput) {
+        outputText += line + '\n';
+      }
+    }
+    inputText = inputText.trim();
+    outputText = outputText.trim();
+    applyParsedMeta(meta, inputText, outputText);
+    setToastInfo({ show: true, message: 'File TXT berhasil diupload!' });
+  }
+
+  // JSON parser
+  function parseJsonFile(text) {
+    try {
+      const obj = JSON.parse(text);
+      const meta = (obj.metadata || {});
+      const inputText = obj.input || '';
+      const outputText = obj.output || '';
+      applyParsedMeta(meta, inputText, outputText);
+      setToastInfo({ show: true, message: 'File JSON berhasil diupload!' });
+    // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      showError('File JSON tidak valid.');
+    }
+  }
+
+  // XLSX parser
+  async function parseXlsxFile(arrayBuffer) {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+      const sheet = workbook.getWorksheet('Cipher Report') || workbook.worksheets[0];
+      let meta = {}, inputText = '', outputText = '';
+      let section = '';
+      sheet.eachRow((row) => {
+        const a = (row.getCell(1).value || '').toString().trim();
+        const b = (row.getCell(2).value || '').toString().trim();
+        if (/^parameter/i.test(a)) section = 'meta';
+        else if (/^type/i.test(a)) section = 'io';
+        else if (/^cipher playground report/i.test(a)) section = '';
+        else if (section === 'meta' && a) meta[a.toLowerCase()] = b;
+        else if (section === 'io' && a.toLowerCase() === 'input') inputText = b;
+        else if (section === 'io' && a.toLowerCase() === 'output') outputText = b;
+      });
+      applyParsedMeta(meta, inputText, outputText);
+      setToastInfo({ show: true, message: 'File Excel berhasil diupload!' });
+    // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      showError('File Excel tidak valid.');
+    }
+  }
+
+  // DOCX parser (basic, only works for exported format)
+  async function parseDocxFile(arrayBuffer) {
+    try {
+      const { value } = await mammoth.convertToHtml({ arrayBuffer });
+      // Parse HTML tables
+      const div = document.createElement('div');
+      div.innerHTML = value;
+      const tables = div.querySelectorAll('table');
+      let meta = {}, inputText = '', outputText = '';
+      if (tables.length > 0) {
+        // Metadata table
+        const metaRows = tables[0].querySelectorAll('tr');
+        metaRows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length === 2) {
+            meta[cells[0].innerText.trim().toLowerCase()] = cells[1].innerText.trim();
+          }
+        });
+      }
+      if (tables.length > 1) {
+        // IO table
+        const ioRows = tables[1].querySelectorAll('tr');
+        ioRows.forEach(row => {
+          const cells = row.querySelectorAll('td');
+          if (cells.length === 2) {
+            if (cells[0].innerText.trim().toLowerCase() === 'input') inputText = cells[1].innerText.trim();
+            if (cells[0].innerText.trim().toLowerCase() === 'output') outputText = cells[1].innerText.trim();
+          }
+        });
+      }
+      applyParsedMeta(meta, inputText, outputText);
+      setToastInfo({ show: true, message: 'File DOCX berhasil diupload!' });
+    // eslint-disable-next-line no-unused-vars
+    } catch (e) {
+      showError('File DOCX tidak valid.');
+    }
+  }
+
+  // Mapping metadata to state
+  function applyParsedMeta(meta, inputText) {
+    // Set method, mode, and all relevant state
+    setText(inputText);
+    setGridText(inputText);
+    // Always set method and mode first for immediate UI update
+    if (meta.method) setMethod(meta.method.toLowerCase());
+    if (meta.mode) setMode(meta.mode.toLowerCase());
+    if (meta.shift) setCaesarShift(Number(meta.shift));
+    if (meta.rails) setRails(Number(meta.rails));
+    if (meta.key) setColumnarKey(meta.key);
+    if (meta.keytype) setColumnarKeyType(meta.keytype);
+    if (meta.blocksize) setRandomBlockSize(meta.blocksize);
+    if (meta.pattern) setRandomPattern(meta.pattern);
+    if (meta.caseStrategy || meta.casestrategy) setCaseStrategy((meta.caseStrategy || meta.casestrategy));
+    if (meta.foreignMode || meta.foreignmode) setForeignMode((meta.foreignMode || meta.foreignmode));
+    if (meta.vigenerekey) setVigenereKey(meta.vigenerekey);
+    if (meta.addrandompadding) {
+      if (meta.method === 'columnar') setPaddingEnabled(meta.addrandompadding === 'yes');
+      if (meta.method === 'random') setRandomPaddingEnabled(meta.addrandompadding === 'yes');
+    }
+    // Output is not set to state, only input is editable
+  }
 
   // Generate all permutations for pattern finder
   const generatePermutations = (n) => {
@@ -236,7 +606,7 @@ export default function App() {
                  from-violet-200 via-pink-100 to-rose-100
                  bg-linear-to-br"
     >
-      <Toast message={toastInfo.message} show={toastInfo.show} onDismiss={() => setToastInfo({ show: false, message: '' })} />
+  <Toast message={toastInfo.message} show={toastInfo.show} onDismiss={() => setToastInfo({ show: false, message: '' })} color={toastInfo.color} />
       
       {/* CSS untuk animasi dan slider */}
       <style>{`
@@ -319,7 +689,7 @@ export default function App() {
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-        /* Style vertical scrollbar */
+      /* Style vertical scrollbar */
         .overflow-y-auto::-webkit-scrollbar {
           width: 8px;
         }
@@ -338,10 +708,19 @@ export default function App() {
           scrollbar-width: thin;
           scrollbar-color: rgba(139, 92, 246, 0.3) rgba(0, 0, 0, 0.05);
         }
+        /* Ensure body can scroll */
+        body {
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        html {
+          overflow-y: auto;
+          height: 100%;
+        }
       `}</style>
 
       <header className="sticky top-0 z-10 backdrop-blur bg-white/40 border-b border-white/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+        <Container className="py-3 sm:py-4 flex items-center justify-between gap-2">
           <div className="min-w-0">
             <h1 
               className="m-0 text-lg sm:text-xl font-extrabold bg-linear-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent cursor-pointer transition-opacity truncate"
@@ -354,10 +733,11 @@ export default function App() {
           <div className="flex items-center gap-2 shrink-0">
             <ExampleDropdown onSelectExample={handleSelectExample} />
           </div>
-        </div>
+        </Container>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className="flex-1">
+        <Container className="py-4 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 items-stretch lg:items-start">
           {/* Left View (Input) */}
           <div className="w-full lg:w-[340px] shrink-0">
@@ -367,6 +747,24 @@ export default function App() {
                 onChange={handleTextChange}
                 readOnly={false}
                 placeholder={mode === 'encode' ? "Tulis teks di sini..." : "Tulis ciphertext di sini..."}
+                actionElement={
+                  <label
+                    // --- GAYA YANG DIPERBARUI ---
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-violet-700 hover:bg-white/50 border border-transparent hover:border-white/60 cursor-pointer select-none transition-colors duration-150"
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-violet-700">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0l-5 5m5-5l5 5" />
+                    </svg>
+                    <span className="font-semibold">Upload</span>
+                    <input
+                      type="file"
+                      accept=".txt,.md,.json,.pdf,.docx,.xlsx,*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                }
             />
           </div>
 
@@ -443,7 +841,7 @@ export default function App() {
                           const blocks = [];
                           for (let i = 0; i < demoText.length; i += size) {
                             blocks.push(demoText.slice(i, i + size));
-                          }                          return (
+                          }                           return (
                             <div className="max-h-[220px] overflow-y-auto overscroll-contain">
                               <div className="grid-scroll overflow-x-auto overscroll-contain">
                                 <div className="space-y-4">
@@ -575,7 +973,7 @@ export default function App() {
                                 </div>
                                 
                                 {/* Grid */}
-                                <div className="max-h-[140px] overflow-y-auto overscroll-contain">
+                                <div className="max-h-[280px] overflow-y-auto overscroll-contain">
                                   <div className="grid-scroll max-w-[280px]">
                                     <div className="space-y-0.5">
                                       {Array.from({ length: numRows }, (_, r) => (
@@ -617,7 +1015,7 @@ export default function App() {
                           return (
                             <>
                               {/* Key header with numbers */}
-                              <div className="mb-3 overflow-x-auto max-h-[120px] overflow-y-auto overscroll-contain">
+                              <div className="mb-3 overflow-x-auto max-h-[200px] overflow-y-auto overscroll-contain">
                                 {(() => {
                                   const chunks = [];
                                   for (let i = 0; i < numCols; i += 10) {
@@ -649,7 +1047,7 @@ export default function App() {
                               </div>
                               
                               {/* Grid */}
-                              <div className="max-h-[140px] overflow-y-auto overscroll-contain">
+                              <div className="max-h-[280px] overflow-y-auto overscroll-contain">
                                 <div className="grid-scroll max-w-[280px]">
                                   <div className="space-y-0.5">
                                     {Array.from({ length: numRows }, (_, r) => (
@@ -674,18 +1072,18 @@ export default function App() {
                               <div className="mt-3 pt-3 border-t border-slate-300">
                                 <div className="text-xs text-slate-600">
                                   <strong>{mode === 'encode' ? 'Urutan baca kolom:' : 'Urutan taruh kolom:'}</strong>
-                                  <div className="max-h-18 overflow-y-auto mt-1 overscroll-contain">
+                                  <div className="max-h-32 overflow-y-auto mt-1 overscroll-contain">
                                     <div className="space-y-0.5">
                                       {(() => {
                                         const sortedItems = keyWithRank
                                           .map((item, idx) => ({ ...item, originalIdx: idx }))
                                           .sort((a, b) => a.rank - b.rank);
-                                        
+                                      
                                         const rows = [];
                                         for (let i = 0; i < sortedItems.length; i += 3) {
                                           rows.push(sortedItems.slice(i, i + 3));
                                         }
-                                        
+                                      
                                         return rows.map((row, rowIdx) => (
                                           <div key={rowIdx} className="leading-relaxed">
                                             {row.map((item, i) => (
@@ -708,11 +1106,259 @@ export default function App() {
                       </div>
                     </MonoBox>
                   </div>
-                ) : method === 'rot13' ? (
+                ) : method === 'vigenere' ? (
                   <div className="space-y-2">
-                    <label className="text-slate-600 text-sm mb-1 block">Ciphertext alphabet (ROT13)</label>
-                    <MonoBox>{ctAlpha.slice(13)}</MonoBox>
-                    <MonoBox>{ctAlpha.slice(0, 13)}</MonoBox>
+                    <label className="text-slate-600 text-sm mb-1 block">
+                      Vigenère Cipher Process
+                    </label>
+                    <div className="text-xs text-slate-600 mb-2 bg-blue-50/50 p-2 rounded-lg border border-blue-200/50">
+                      💡 <strong>Cara kerja:</strong> Setiap huruf plaintext digeser berdasarkan huruf kunci yang sesuai. 
+                      Kunci diulang sampai panjang plaintext. {mode === 'encode' 
+                        ? 'Jika hasil > 25, kurangi 26 (modulo 26).' 
+                        : 'Untuk dekripsi: kurangi nilai kunci, jika hasil negatif tambah 26 dulu.'}
+                    </div>
+                    <MonoBox className="min-h-[200px]">
+                      <div className="text-xs leading-relaxed font-mono">
+                        {(() => {
+                          const key = (vigenereKey || 'ADEL').toUpperCase();
+                          const demoText = (text || 'STACK UNIVERSAL').toUpperCase().replace(/[^A-Z]/g, '');
+                          if (!demoText) {
+                            return (
+                              <div className="text-center py-8 text-slate-500">
+                                {/* Pesan jika tidak ada teks untuk demo */}
+                              </div>
+                            );
+                          }
+                          const repeatedKey = key.repeat(Math.ceil(demoText.length / key.length)).slice(0, demoText.length);
+                          let result = '';
+                          for (let i = 0; i < demoText.length; i++) {
+                            const p = demoText.charCodeAt(i) - 65;
+                            const k = repeatedKey.charCodeAt(i) - 65;
+                            if (mode === 'encode') {
+                              result += String.fromCharCode(65 + ((p + k) % 26));
+                            } else {
+                              result += String.fromCharCode(65 + ((p - k + 26) % 26));
+                            }
+                          }
+                          // Baris index dan abjad (responsive + konsisten dengan gaya Random)
+                          const indices = Array.from({ length: 26 }, (_, i) => i);
+                          const abjad = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+                          return (
+                            <div className="max-h-[280px] overflow-y-auto overscroll-contain">
+                              <div className="w-full overflow-hidden">
+                                {/* Baris index & abjad: angka tepat di atas huruf */}
+                                <div className="flex flex-col gap-0.5 mb-0.5">
+                                  <div className="overflow-x-scroll grid-scroll">
+                                    <div className="flex flex-row gap-3 mb-1 pb-1 border-b border-slate-300 min-w-max">
+                                      {indices.map((i) => (
+                                        <div key={i} className="flex flex-col items-center w-5">
+                                          <span className="font-mono text-violet-600 font-semibold text-[10px]">{i}</span>
+                                          <span className="font-mono text-violet-600 font-bold text-sm">{abjad[i]}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Baris data (Plain / Key / Cipher) - ukuran sel responsif agar cocok di mobile */}
+                                {/* MODIFIED: Added horizontal scroll wrapper here */}
+                                <div className="overflow-x-scroll grid-scroll pb-3 w-full">
+                                    <div className="min-w-max">
+                                      {mode === 'encode' ? (
+                                      <div className="inline-block">
+                                          {/* Plain index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(demoText).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-violet-500 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Plain row */}
+                                          <div className="flex gap-2 items-center mb-1 whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Plain:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(demoText).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-blue-100 rounded text-blue-800 font-semibold">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                          {/* Key index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(repeatedKey).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-green-600 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Key row */}
+                                          <div className="flex gap-2 items-center mb-1 whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Key:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(repeatedKey).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-green-100 rounded text-green-800 font-bold text-xs shrink-0">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                          {/* Cipher index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(result).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-violet-800 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Cipher row */}
+                                          <div className="flex gap-2 items-center whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Cipher:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(result).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-violet-100 rounded text-violet-800 font-semibold shrink-0">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                      </div>
+                                      ) : (
+                                      <div className="inline-block">
+                                          {/* Cipher index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(demoText).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-violet-800 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Cipher row */}
+                                          <div className="flex gap-2 items-center mb-1 whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Cipher:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(demoText).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-violet-100 rounded text-violet-800 font-semibold">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                          {/* Key index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(repeatedKey).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-green-600 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Key row */}
+                                          <div className="flex gap-2 items-center mb-1 whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Key:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(repeatedKey).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-green-100 rounded text-green-800 font-bold text-xs shrink-0">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                          {/* Plain index */}
+                                          <div className="flex gap-2 items-center mb-0.5 whitespace-nowrap">
+                                          <span className="text-slate-400 text-xs font-normal w-13 shrink-0"></span>
+                                          <div className="flex gap-1">
+                                              {Array.from(result).map((c, i) => {
+                                              const code = c.toLowerCase().charCodeAt(0);
+                                              return (
+                                                  <span key={i} className="text-[9px] text-violet-500 w-6 text-center font-mono">{code >= 97 && code <= 122 ? code - 97 : ''}</span>
+                                              );
+                                              })}
+                                          </div>
+                                          </div>
+                                          {/* Plain row */}
+                                          <div className="flex gap-2 items-center whitespace-nowrap">
+                                          <span className="text-slate-500 text-xs font-normal w-13 shrink-0">Plain:</span>
+                                          <div className="flex gap-1">
+                                              {Array.from(result).map((c, i) => (
+                                              <span key={i} className="w-6 h-6 flex items-center justify-center bg-blue-100 rounded text-blue-800 font-semibold shrink-0">{c}</span>
+                                              ))}
+                                          </div>
+                                          </div>
+                                      </div>
+                                      )}
+                                    </div>
+                                </div>
+
+                                {/* Formula per karakter: tampilkan dengan gaya serupa 'Urutan baca kolom' pada Columnar */}
+                                <div className="mt-0.5 pt-0.5 border-t border-slate-300">
+                                  <div className="text-xs text-slate-600 mb-1">
+                                    Setiap karakter: {mode === 'encode' ? (
+                                      <>  
+                                        <span className="font-semibold text-slate-700">Plaintext</span> + <span className="font-semibold text-fuchsia-700">Key</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="font-semibold text-slate-700">Ciphertext</span> - <span className="font-semibold text-fuchsia-700">Key</span> 
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="overflow-x-auto grid-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                    <div className="max-h-32 overflow-y-auto mt-1 overscroll-contain min-w-full">
+                                      <div className="space-y-0.5 leading-relaxed min-w-max">
+                                        {Array.from(demoText).map((pChar, i) => {
+                                          const kChar = repeatedKey[i];
+                                          const cChar = result[i];
+                                          const pNum = pChar.charCodeAt(0) - 65;
+                                          const kNum = kChar.charCodeAt(0) - 65;
+                                          const cNum = cChar.charCodeAt(0) - 65;
+                                          const raw = mode === 'encode' ? pNum + kNum : pNum - kNum;
+                                          const mod = ((raw % 26) + 26) % 26;
+                                          return (
+                                            <div key={i} className="leading-relaxed">
+                                              <span className="text-slate-400 mr-2">{i + 1}.</span>
+                                              <span>
+                                                <span className="bg-slate-100 text-slate-800 rounded px-2 py-0.5 font-bold">{pChar}({pNum})</span>
+                                                <span className="text-slate-500 px-2">{mode === 'encode' ? '+' : '-'}</span>
+                                                <span className="bg-fuchsia-50 text-fuchsia-800 rounded px-2 py-0.5 font-bold">{kChar}({kNum})</span>
+                                                <span className="text-slate-500 px-2">=</span>
+                                                <span className="text-slate-700 font-semibold">{raw}</span>
+                                                {((mode === 'encode' && raw > 25) || (mode === 'decode' && (raw < 0 || raw !== mod))) && (
+                                                  <>
+                                                    <span className="text-slate-500 px-2">→</span>
+                                                    {mode === 'decode' && raw < 0 && (
+                                                      <span className="bg-fuchsia-50 text-fuchsia-700 rounded px-2 py-0.5 font-bold">{raw + 26}</span>
+                                                    )}
+                                                    <span className="text-slate-500 px-2">→</span>
+                                                    <span className="bg-amber-50 text-amber-700 rounded px-2 py-0.5 font-bold">{mod}</span>
+                                                  </>
+                                                )}
+                                                <span className="text-slate-500 px-2">→</span>
+                                                <span className="bg-amber-100 text-amber-800 rounded px-2 py-0.5 font-bold">{cChar}({cNum})</span>
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </MonoBox>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -722,6 +1368,7 @@ export default function App() {
                     <MonoBox>{ctAlpha}</MonoBox>
                   </div>
                 )}
+
               </div>
 
               <div className="space-y-4">
@@ -875,6 +1522,13 @@ export default function App() {
                   </>
                 )}
 
+                {method === 'vigenere' && (
+                  <VigenereKeyInput 
+                    vigenereKey={vigenereKey} 
+                    setVigenereKey={setVigenereKey}
+                  />
+                )}
+
                 {(method === 'atbash' || method === 'rot13' || method === 'caesar') && (
                   <div>
                     <label className="text-slate-600 text-sm mb-1 block">Foreign chars</label>
@@ -930,12 +1584,20 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-3">
+                {/* --- BAGIAN TOMBOL --- */}
+                <div className="flex flex-wrap gap-3 items-center">
                   <Button variant="secondary" onClick={handleCopy}>
                     Copy output
                   </Button>
+                  
+                  {/* Dropdown Download Kustom */}
+                  <DownloadFormatDropdown 
+                    onSelectFormat={handleDownload} 
+                  />
+                  
                   <Button variant="ghost" onClick={handleClear}>Clear</Button>
                 </div>
+                {/* --- AKHIR BAGIAN TOMBOL --- */}
                 
                 <div className="text-slate-500 text-xs pt-2 border-t border-white/60">
                   Metode: {method.toUpperCase()}
@@ -960,6 +1622,7 @@ export default function App() {
             />
           </div>
         </div>
+        </Container>
       </main>
 
       <LyricFooter />
@@ -976,7 +1639,7 @@ export default function App() {
             {modalToast.message}
           </div>
           
-          <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-[85vw] md:max-w-3xl lg:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-2xl w-full max-w-[95vw] sm:max-w-[85vw] md:max-w-3xl lg:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="bg-linear-to-r from-violet-600 to-fuchsia-600 p-3 sm:p-4 md:p-5 text-white shrink-0">
               <div className="flex items-center justify-between gap-2">

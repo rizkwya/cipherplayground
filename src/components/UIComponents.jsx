@@ -1,3 +1,5 @@
+import React from 'react';
+
 function MonoBox({ children, className = '' }) {
   return (
     <div className={`font-mono text-xs sm:text-sm overflow-x-auto whitespace-nowrap rounded-lg sm:rounded-xl p-2 sm:p-3

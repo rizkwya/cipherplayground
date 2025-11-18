@@ -30,6 +30,9 @@ function MethodDropdown({ method, setMethod }) {
           <option value="random" title="Random Transposition: Shuffle by seed">
             Random Transposition
           </option>
+          <option value="vigenere" title="Vigenère: Polyalphabetic substitution with keyword">
+            Vigenère Cipher
+          </option>
         </select>
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-violet-500">
           <svg width="16" height="16" viewBox="0_0_20_20" fill="currentColor" aria-hidden="true">

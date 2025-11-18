@@ -466,7 +466,18 @@ export default function App() {
     if (meta.mode) setMode(meta.mode.toLowerCase());
     if (meta.shift) setCaesarShift(Number(meta.shift));
     if (meta.rails) setRails(Number(meta.rails));
-    if (meta.key) setColumnarKey(meta.key);
+    // `meta.key` may refer to different cipher keys depending on method
+    if (meta.key) {
+      const m = (meta.method || '').toLowerCase();
+      if (m === 'vigenere') {
+        setVigenereKey(meta.key);
+      } else if (m === 'columnar') {
+        setColumnarKey(meta.key);
+      } else {
+        // fallback: prefer columnar key for legacy files
+        setColumnarKey(meta.key);
+      }
+    }
     if (meta.keytype) setColumnarKeyType(meta.keytype);
     if (meta.blocksize) setRandomBlockSize(meta.blocksize);
     if (meta.pattern) setRandomPattern(meta.pattern);
